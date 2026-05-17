@@ -18,7 +18,8 @@ local groups = {}
 
 -- Fill the member and filter tables with sprite buttons.
 ---@param player LuaPlayer
-function groups.populate_logistic_group(player)
+---@param group_type logistic_group_type
+function groups.populate_logistic_group(player, group_type)
   local data = player_data(player.index)
   local guis = data.guis
 
@@ -40,7 +41,7 @@ function groups.populate_logistic_group(player)
   data.last_group = group_name
   guis.group_label.caption = group_name
 
-  local group = player.force.get_logistic_group(group_name)
+  local group = player.force.get_logistic_group(group_name, group_type)
   if not group then
     return
   end

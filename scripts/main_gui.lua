@@ -4,6 +4,15 @@ local player_data = require("scripts.player_data")
 local remote_view = require("scripts.remote_view")
 local util = require("scripts.util")
 
+-- TODO:
+-- * Add a drop down
+-- * Populate the drop down
+-- * Internal tracking: check when the drop down changes and change internal field.
+--    * Remember previous setting for multiple sessions.
+-- * Populate the main UI based on the drop down's internal field.
+--   Change when internal field changes.
+
+
 local main_gui = {}
 
 -- Return true if the player has a valid main frame open.
@@ -22,6 +31,52 @@ function main_gui.destroy(player_index)
   end
   data.guis = {}
   data.entities = {}
+end
+
+--Builds the main logistics GUI from the logistic group type
+---@param player LuaPlayer
+---@param guis table
+---@param groups_frame table
+---@param group_type logistic_group_type
+---@return boolean True if logistics groups of that type exist.
+function main_gui.build_logistic_group(player, guis, groups_frame, group_type)
+  util.debug_print("test")
+
+  local logistic_groups = player.force.get_logistic_groups(group_type)
+  guis.groups_list = groups_frame.add({
+    type = "list-box",
+    name = "groups_list",
+    direction = "vertical",
+    items = logistic_groups,
+  })
+  guis.groups_list.style.vertically_stretchable = true
+
+  if table_size(logistic_groups) == 0 then
+    guis.groups_list.selected_index = 0
+    local no_groups_message = guis.groups_list.add({
+      type = "frame",
+      name = "no_groups_message",
+      style = "negative_subheader_frame",
+      caption = { "", "[img=utility/warning_white] ", { "logistic_group_explorer-name.no-logistic-groups" } },
+    })
+    -- This element does not want to horizontally stretch.
+    -- This width is the width of the right_side_frame.
+    no_groups_message.style.natural_width = const.slot_size * 6
+    return false
+  end
+
+  local data = player_data(player.index)
+  guis.groups_list.selected_index = 1
+  local last_group = data.last_group
+  if last_group then
+    local last_group_index = util.find(logistic_groups, last_group)
+    if last_group_index > 0 then
+      guis.groups_list.selected_index = last_group_index
+      guis.groups_list.scroll_to_item(last_group_index, "top-third")
+    end
+  end
+
+  return true
 end
 
 -- Build a new main frame for the player.
@@ -46,45 +101,39 @@ function main_gui.build(player)
     type = "frame",
     name = "groups_frame",
     direction = "vertical",
-    style = "right_side_frame",
-    caption = {
-      "logistic_group_explorer-name.logistic-groups",
-    },
+    style = const.right_side_no_spacer_frame, --"right_side_frame",
+    --caption = { "logistic_group_explorer-name.logistic-groups", },
   })
   groups_frame.style.natural_height = main_frame.style.natural_height
   groups_frame.style.vertically_stretchable = true
 
-  local logistic_groups = player.force.get_logistic_groups()
-  guis.groups_list = groups_frame.add({
-    type = "list-box",
-    name = "groups_list",
-    direction = "vertical",
-    items = logistic_groups,
-  })
-  guis.groups_list.style.vertically_stretchable = true
-
-  if table_size(logistic_groups) == 0 then
-    guis.groups_list.selected_index = 0
-    local no_groups_message = guis.groups_list.add({
-      type = "frame",
-      name = "no_groups_message",
-      style = "negative_subheader_frame",
-      caption = { "", "[img=utility/warning_white] ", { "logistic_group_explorer-name.no-logistic-groups" } },
+  --Create header for logistic groups frame.
+  do
+    local groups_frame_header = groups_frame.add({ type = "flow", name = "group_type_header", style = "frame_header_flow" })
+    local label = groups_frame_header.add({
+      type="label", name="group_frame_name", caption={ "logistic_group_explorer-name.logistic-groups", },
     })
-    -- This element does not want to horizontally stretch.
-    -- This width is the width of the right_side_frame.
-    no_groups_message.style.natural_width = const.slot_size * 6
-    return
+
+    local group_spacer = groups_frame_header.add({ type = "empty-widget", style = "empty_widget" })
+    group_spacer.style.horizontally_stretchable = true
+
+    local display_names = {}
+    for i, gt in ipairs(util.group_types) do
+      display_names[i] = gt.display_name
+    end
+
+    guis.group_type = groups_frame_header.add({
+      type="drop-down", name="group_frame_drop", items = display_names
+    })
+
+    --TODO: Use last index.
+    guis.group_type.selected_index = 1
   end
 
-  guis.groups_list.selected_index = 1
-  local last_group = data.last_group
-  if last_group then
-    local last_group_index = util.find(logistic_groups, last_group)
-    if last_group_index > 0 then
-      guis.groups_list.selected_index = last_group_index
-      guis.groups_list.scroll_to_item(last_group_index, "top-third")
-    end
+
+  --Return if no logistics groups of that type exist
+  if not main_gui.build_logistic_group(player, guis, groups_frame, defines.logistic_group_type.with_trash) then
+    return
   end
 
   local combo_frame = main_frame.add({
@@ -188,7 +237,7 @@ function main_gui.build(player)
     vertical_centering = false,
   })
 
-  groups.populate_logistic_group(player)
+  groups.populate_logistic_group(player, defines.logistic_group_type.with_trash)
 end
 
 -- Toggle the main frame for the player, opening a new frame if one does not

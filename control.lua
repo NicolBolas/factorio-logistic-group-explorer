@@ -58,11 +58,18 @@ end)
 
 script.on_event(defines.events.on_gui_selection_state_changed, function(event)
   local guis = player_data(event.player_index).guis
-  if is_event_valid(event) and event.element == guis.groups_list then
-    local player = game.get_player(event.player_index)
-    if player then
-      groups.populate_logistic_group(player)
-      search.update_search_results(guis, player)
+  if is_event_valid(event) then
+    if event.element == guis.groups_list then
+      local player = game.get_player(event.player_index)
+      if player then
+        groups.populate_logistic_group(player, defines.logistic_group_type.with_trash)
+        search.update_search_results(guis, player)
+      end
+    end
+    if event.element == guis.group_type then
+      local player = game.get_player(event.player_index)
+      if player then
+      end
     end
   end
 end)
@@ -164,7 +171,7 @@ script.on_event(defines.events.on_entity_logistic_slot_changed, function(event)
   local players = event.entity.force.connected_players
   for _, player in pairs(players) do
     if player_data(player.index).last_group == group and main_gui.valid(player.index) then
-      groups.populate_logistic_group(player)
+      groups.populate_logistic_group(player, defines.logistic_group_type.with_trash)
     end
   end
 end)

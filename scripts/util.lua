@@ -45,4 +45,35 @@ function util.format_number(amount)
   return tostring(amount)
 end
 
+
+--Logistic group type definitions for drop-down list.
+local group_types = {
+  {
+    display_name = "Logistics",
+    define = defines.logistic_group_type.with_trash,
+  },
+  {
+    display_name = "Roboport",
+    define = defines.logistic_group_type.roboport,
+  },
+}
+
+util.group_types = group_types
+
+--For debugging. Should be commented out on release.
+local function internal_debug_print(msg)
+    game.print(msg, {
+        skip = defines.print_skip.never,
+        game_state = false,
+      })
+end
+
+--For release. Should be commented out when debugging.
+--local function internal_debug_print() end
+
+function util.debug_print(msg)
+  internal_debug_print(msg)
+end
+
+
 return util
